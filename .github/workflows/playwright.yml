@@ -7,7 +7,7 @@ on:
 jobs:
   test:
     env:
-      STORE_USER_PASSWORD: ${{secrets.STORE_PASSWORD}}
+      STORE_USER_PWD: ${{secrets.STORE_USER_PASSWORD}}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
