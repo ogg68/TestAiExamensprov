@@ -52,6 +52,7 @@ export class LoginPage {
 
   async login(username: string = '', password: string, role: string = "Business") {
     await this.usernameField.fill(username);
+    console.log("password = " + password)
     await this.passwordField.fill(password);
     this.setRole(role);
     await this.loginButton.click();
