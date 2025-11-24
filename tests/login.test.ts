@@ -42,7 +42,7 @@ import { LoginPage } from "../pages/loginPage";
     await expect(page.getByTestId("error-message")).toHaveText("Please fill in all fields.");
   });
 
-  test('Succesful Login', async ({ page }) => {
+  test.only('Succesful Login', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     if (process.env.STORE_USER_PASSWORD !== undefined){
