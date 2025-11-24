@@ -1,91 +1,72 @@
-import { Page, Locator, expect } from '@playwright/test';
 
-export class LoginPage {
+//Username: any name..
+//Password: STORE_USER_PASSWORD
 
-  //Selectors:
-  readonly page: Page;
-  readonly usernameField: Locator;
-  readonly passwordField: Locator;
-  readonly roleField: Locator;
-  readonly loginButton: Locator;
-  readonly errorMessage: Locator;
-  readonly logoutButton:Locator;
+import { expect, test } from '@playwright/test';
+import { LoginPage } from "../pages/loginPage";
 
-  //Constants:
-  private readonly loginUrl = "/login/";
-  private readonly storeUrl = "/store2/";
-
-  constructor(page: Page) {
-    this.page = page;
-    this.usernameField = page.getByRole('textbox', { name: 'Username' });
-    this.passwordField = page.getByRole('textbox', { name: 'Password' });
-    this.roleField = page.locator("#role");                 // selectOption: <select id="role">
-    //this.roleField = page.getByLabel("Select Role");      //ska funka också
-    this.loginButton = page.getByRole('button', { name: 'Login' });
-    this.errorMessage = page.getByTestId("error-message");
-    this.logoutButton = page.getByRole('button', { name: 'Log Out' });
-  }
-
-  async goto() {
-    await this.page.goto(this.loginUrl);         // use base URL from config file: 'https://hoff.is/login/'
-    //await expect(this.usernameField).toBeVisible();       //ska funka också ihop med ovan rad
-  }
-
-  /** Hämta alla option-värden (text) */
-  async getRoleOptions(): Promise<string[]> {
-    return await this.roleField.locator('option').allTextContents();
-  }
-
-  /** Kontrollera att alternativen är som förväntat */
-  async assertRoleOptions(expectedValues: string[]) {
-    const actualValues = await this.getRoleOptions();
-    await expect(actualValues).toEqual(expectedValues);
-  }
-
-  /** Hämta vilket värde som är valt just nu */
-  async getSelectedRole(): Promise<string | null> {
-    return await this.roleField.inputValue();   // returns 'value'-attribute "Consumer", "Business"
-  }
-
-  async setRole(role: string = "Business"){         //"Consumer", Business
-    await this.roleField.selectOption(role);
-  }
-
-  async login(username: string = '', password: string, role: string = "Business") {
-    await this.usernameField.fill(username);
-    await this.passwordField.fill(password);
-    this.setRole(role);
-    await this.loginButton.click();
-  }
+//test.describe('Login', () => {
   
-  async logout(){
-    await this.logoutButton.click();
-  }
+  let password: string;
 
-  /** Kontrollera vilket alternativ som är valt */
-  async assertSelectedRole(expectedValue: string) {
-    const selected = await this.getSelectedRole();
-    await expect(selected).toBe(expectedValue);
-  }
+  test('Verify Role', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
 
-  async assertSuccessfulLogin() {
-    // Exempel på något som visar att man loggats in (justera efter sajten)
-    await expect(this.page).toHaveURL(this.storeUrl);     // "https://hoff.is/store2/""
-  }
+    // 1️⃣ Kontrollera att dropdown innehåller rätt alternativ
+    //const expectedOptions = ['Business', 'Consumer']; // ändra enligt vad sidan faktiskt har text i inner-HTML
+    //await loginPage.assertRoleOptions(expectedOptions);
 
-  async assertFailedLogin() {
-    // Exempel: felmeddelande på sidan
-    //const errorMessage = this.page.locator('text=Please fill in all fields.');
-    //await expect(errorMessage).toBeVisible();
-    //or
-    await expect(this.errorMessage).toContainText("bla");
-    //or
-    //await expect(this.page.getByTestId('error-message')).toContainText('Incorrect password');
-  }
+    // 2️⃣ Kontrollera vilket värde som är valt som standard
+    //set value first:
+    await loginPage.setRole('Consumer');            // värdet som visas/"fyll i"/inner-html
+    await loginPage.assertSelectedRole('consumer'); // ändra enligt default-värdet på sidan value-namnet (typ id)
+  });
 
-  async assertFailedLogin2() {
-    await expect(this.errorMessage).toHaveText("bla");
-    //or
-    //await expect(this.page.getByTestId('error-message')).toContainText('Please fill in all fields.');
-  }
-}
+  test('Failed Login wrongPwd', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login('felanvändare', 'felLösenord', "Consumer");
+
+    //await loginPage.assertFailedLogin();
+    //await expect(page.getByTestId('error-message')).toContainText('Incorrect password');
+    await expect(page.getByTestId('error-message')).toContainText("Incorrect password");
+  });
+
+  test('Failed Login fieldMissing', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.login('', 'felLösenord');
+
+    //await loginPage.assertFailedLogin2();
+    await expect(page.getByTestId("error-message")).toHaveText("Please fill in all fields.");
+  });
+
+  test('Succesful Login', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    if (process.env.STORE_USER_PASSWORD !== undefined){
+        password = process.env.STORE_USER_PASSWORD;
+    }
+    await loginPage.login('joe', password, "Consumer");
+    
+    //await loginPage.assertSuccessfulLogin();
+    await expect(page).toHaveURL("/store2/");
+  });
+
+  test("logout", async({page}) => {
+    //first do login:
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    if (process.env.STORE_USER_PASSWORD !== undefined){
+        password = process.env.STORE_USER_PASSWORD;
+    }
+    await loginPage.login('joe', password, "Consumer");
+    await expect(page).toHaveURL("/store2/");
+
+    //then logout:
+    await loginPage.logout();
+    await expect(page).toHaveURL("/login/");
+  })
+
+//});
